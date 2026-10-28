@@ -305,18 +305,44 @@ if result:
 
 
 # --------------------------------------------------
-# Next integration step
+# Saved recordings and playback
 # --------------------------------------------------
 
 st.divider()
+st.subheader("Saved recordings")
 
-st.subheader("Next integration step")
+try:
+    recordings_response = requests.get(
+        f"{api_base}/recordings",
+        timeout=10,
+    )
+    recordings_response.raise_for_status()
+    recordings = recordings_response.json()
 
-st.write(
-    "The backend currently returns recording metadata, including the "
-    "saved WAV path. Browser playback is not implemented yet. A "
-    "dedicated audio-serving endpoint can be added next."
-)
+    if not isinstance(recordings, list):
+        st.error("Unexpected response from GET /recordings.")
+    elif not recordings:
+        st.info("No WAV recordings found yet. Record audio first.")
+    else:
+        selected_recording = st.selectbox(
+            "Choose a recording",
+            options=recordings,
+        )
+
+        if selected_recording:
+            audio_response = requests.get(
+                f"{api_base}/recordings/{selected_recording}",
+                timeout=30,
+            )
+            audio_response.raise_for_status()
+
+            st.audio(
+                audio_response.content,
+                format="audio/wav",
+            )
+
+except requests.RequestException as exc:
+    st.error(f"Could not load or play recordings: {exc}")
 
 st.caption(
     "Local prototype · Do not expose this development server to an untrusted network ☢️"
